@@ -1,0 +1,15 @@
+.fade-transform {
+  &-enter-active, &-leave-active {
+    transition: opacity .5s, transform .8s;
+  }
+
+  &-enter, &-leave-to {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+
+  &-enter-to, &-leave {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
