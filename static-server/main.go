@@ -20,23 +20,8 @@ type Link struct {
 }
 
 func main() {
-	// resp, err := http.Get("http://www.baidu.com/")
-
-	// if err != nil {
-	// 	print(resp.StatusCode)
-	// }
-	// defer resp.Body.Close()
-	// body, err := ioutil.ReadAll(resp.Body)
-	// if err != nil {
-	// 	print(err.Error())
-	// }
-	// fmt.Printf(string(body))
-	// http.Handle("/foo", fooHandler)
 	fmt.Println("Starting server on :8080...")
-	walkDirFunc(BaseURL)
-	// http.HandleFunc("/bar", func(w http.ResponseWriter, r *http.Request) {
-	// 	fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
-	// })
+	go walkDirFunc(BaseURL)
 
 	http.ListenAndServe(":8080", nil)
 }
@@ -53,7 +38,7 @@ func walkDirFunc(path string) error {
 	for _, file := range files {
 		links = append(links, file.Name())
 		if file.IsDir() {
-			defer walkDirFunc(path + "/" + file.Name())
+			go walkDirFunc(path + "/" + file.Name())
 		} else {
 			mimeType, err := detectMIME(path + "/" + file.Name())
 			if err != nil {
@@ -73,7 +58,6 @@ func walkDirFunc(path string) error {
 		}
 		w.Header().Set("Content-Type", "text/html")
 		teml.Execute(w, data)
-		// fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
 	})
 
 	return nil
