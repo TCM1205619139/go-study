@@ -9,7 +9,7 @@ import (
 func main() {
 	server := gin.Default()
 
-	user := &web.UserHandler{}
+	user := web.NewUserHandler()
 	user.RegisterRoutes(server.Group("/user"))
 
 	server.Run(":8080")
