@@ -1,6 +1,8 @@
 package web
 
 import (
+	"micro-book/internal/domain"
+	"micro-book/internal/service"
 	"net/http"
 
 	regexp "github.com/dlclark/regexp2"
@@ -8,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewUserHandler() *UserHandler {
+func NewUserHandler(svc *service.UserService) *UserHandler {
 	EmailRegexp := regexp.MustCompile(
 		`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`,
 		regexp.None,
@@ -19,6 +21,7 @@ func NewUserHandler() *UserHandler {
 	)
 
 	return &UserHandler{
+		svc:            svc,
 		EmailRegexp:    EmailRegexp,
 		PasswordRegexp: PasswordRegexp,
 	}
@@ -29,18 +32,19 @@ func NewUserHandler() *UserHandler {
 * 可以方便利用包变量特性进行测试
  */
 type UserHandler struct {
+	svc            *service.UserService
 	EmailRegexp    *regexp.Regexp
 	PasswordRegexp *regexp.Regexp
 }
 
-func (u *UserHandler) Signin(ctx *gin.Context) {
-	type SigninRequest struct {
+func (u *UserHandler) Signup(ctx *gin.Context) {
+	type SignupRequest struct {
 		Email           string `json:"email"`
 		Password        string `json:"password"`
 		ConfirmPassword string `json:"confirmPassword"`
 	}
 
-	var req SigninRequest
+	var req SignupRequest
 	if err := ctx.Bind(&req); err != nil {
 		return
 	}
@@ -56,6 +60,15 @@ func (u *UserHandler) Signin(ctx *gin.Context) {
 	}
 	if !ok {
 		ctx.String(http.StatusOK, "邮箱不合规")
+		return
+	}
+
+	err = u.svc.SignupService(ctx, domain.User{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+	if err != nil {
+		ctx.String(http.StatusOK, "系统异常")
 		return
 	}
 
@@ -75,7 +88,7 @@ func (*UserHandler) Page(ctx *gin.Context) {
 }
 
 func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
-	ug.PUT("/:id", u.Signin)
+	ug.PUT("/:id", u.Signup)
 	ug.POST("/:id", u.Edit)
 	ug.GET("/:id", u.Profile)
 	ug.DELETE("/:id", u.Delete)
