@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	regexp "github.com/dlclark/regexp2"
+	"github.com/gin-contrib/sessions"
 
 	"github.com/gin-gonic/gin"
 )
@@ -67,6 +68,13 @@ func (u *UserHandler) Signup(ctx *gin.Context) {
 		Email:    req.Email,
 		Password: req.Password,
 	})
+	if err == service.DuplicateUserEmailError {
+		// ctx.String(http.StatusOK, "邮箱已被注册")
+		ctx.JSON(http.StatusOK, gin.H{
+			"msg": "邮箱已被注册",
+		})
+		return
+	}
 	if err != nil {
 		ctx.String(http.StatusOK, "系统异常")
 		return
@@ -74,6 +82,36 @@ func (u *UserHandler) Signup(ctx *gin.Context) {
 
 	ctx.String(http.StatusOK, "ok")
 }
+
+func (u *UserHandler) Signin(ctx *gin.Context) {
+	type SinginRequest struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req SinginRequest
+
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+
+	user, err := u.svc.SigninService(ctx, domain.User{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+	if err == service.InvavidUserOrPasswordError {
+		ctx.String(http.StatusOK, "用户名或密码错误")
+		return
+	}
+	if err != nil {
+		ctx.String(http.StatusOK, "系统异常")
+		return
+	}
+	session := sessions.Default(ctx)
+	session.Set("userId", user.Id)
+	session.Save()
+	ctx.String(http.StatusOK, "登录成功")
+}
+
 func (*UserHandler) Edit(ctx *gin.Context) {
 
 }
@@ -89,6 +127,7 @@ func (*UserHandler) Page(ctx *gin.Context) {
 
 func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.PUT("/:id", u.Signup)
+	ug.POST("/", u.Signin)
 	ug.POST("/:id", u.Edit)
 	ug.GET("/:id", u.Profile)
 	ug.DELETE("/:id", u.Delete)

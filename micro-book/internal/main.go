@@ -5,7 +5,11 @@ import (
 	"micro-book/internal/repository/dao"
 	"micro-book/internal/service"
 	"micro-book/internal/web"
+	"micro-book/internal/web/middlewares"
+	"net/http"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -13,14 +17,20 @@ import (
 
 func main() {
 	server := gin.Default()
-	db := initDatabase(server)
+	store := cookie.NewStore([]byte("secret"))
+	server.Use(sessions.Sessions("mysession", store))
+	db := initDatabase()
 	user := initUser(db)
+
+	server.Use(middlewares.NewLoginMiddlewareBuilder().
+		IgnoreRequest(http.MethodPut, "/user").
+		Build())
 
 	user.RegisterRoutes(server.Group("/user"))
 	server.Run(":8080")
 }
 
-func initDatabase(service *gin.Engine) *gorm.DB {
+func initDatabase() *gorm.DB {
 	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:13306)/webook"), &gorm.Config{})
 	if err != nil {
 		panic("数据库初始化错误")
