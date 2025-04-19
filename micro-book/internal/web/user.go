@@ -4,6 +4,7 @@ import (
 	"micro-book/internal/domain"
 	"micro-book/internal/service"
 	"net/http"
+	"strconv"
 
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
@@ -20,11 +21,26 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 		`^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{8,}$`,
 		regexp.None,
 	)
+	BirthdayRegexp := regexp.MustCompile(
+		`^((19|20)\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$`,
+		regexp.None,
+	)
+	NickNameRegexp := regexp.MustCompile(
+		`^(?:[\p{L}\p{N}_]){1,32}$`,
+		regexp.None,
+	)
+	DescriptionRegexp := regexp.MustCompile(
+		`^(?:[\p{L}\p{N}_]){1,128}$`,
+		regexp.None,
+	)
 
 	return &UserHandler{
-		svc:            svc,
-		EmailRegexp:    EmailRegexp,
-		PasswordRegexp: PasswordRegexp,
+		svc:               svc,
+		EmailRegexp:       EmailRegexp,
+		PasswordRegexp:    PasswordRegexp,
+		BirthdayRegexp:    BirthdayRegexp,
+		NickNameRegexp:    NickNameRegexp,
+		DescriptionRegexp: DescriptionRegexp,
 	}
 }
 
@@ -33,9 +49,12 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 * 可以方便利用包变量特性进行测试
  */
 type UserHandler struct {
-	svc            *service.UserService
-	EmailRegexp    *regexp.Regexp
-	PasswordRegexp *regexp.Regexp
+	svc               *service.UserService
+	EmailRegexp       *regexp.Regexp
+	PasswordRegexp    *regexp.Regexp
+	BirthdayRegexp    *regexp.Regexp
+	NickNameRegexp    *regexp.Regexp
+	DescriptionRegexp *regexp.Regexp
 }
 
 func (u *UserHandler) Signup(ctx *gin.Context) {
@@ -98,7 +117,7 @@ func (u *UserHandler) Signin(ctx *gin.Context) {
 		Email:    req.Email,
 		Password: req.Password,
 	})
-	if err == service.InvavidUserOrPasswordError {
+	if err == service.InvalidUserOrPasswordError {
 		ctx.String(http.StatusOK, "用户名或密码错误")
 		return
 	}
@@ -107,16 +126,114 @@ func (u *UserHandler) Signin(ctx *gin.Context) {
 		return
 	}
 	session := sessions.Default(ctx)
-	session.Set("userId", user.Id)
+	session.Set("mysession", user.Id)
 	session.Save()
-	ctx.String(http.StatusOK, "登录成功")
+	ctx.JSON(http.StatusOK, gin.H{
+		"msg": "登录成功",
+		"id":  user.Id,
+	})
 }
 
-func (*UserHandler) Edit(ctx *gin.Context) {
+func (u *UserHandler) Edit(ctx *gin.Context) {
+	type EditRequest struct {
+		Email       string `json:"email"`
+		NickName    string `json:"nickName"`
+		Birthday    string `json:"birthday"`
+		Description string `json:"description"`
+	}
+	id, ok := ctx.Params.Get("id")
+	if !ok {
+		return
+	}
+	intId, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return
+	}
+	var req EditRequest
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
 
+	ok, err = u.EmailRegexp.MatchString(req.Email)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "系统错误")
+		return
+	}
+	if !ok {
+		ctx.String(http.StatusOK, "邮箱不合规")
+		return
+	}
+	ok, err = u.BirthdayRegexp.MatchString(req.Birthday)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "系统错误")
+		return
+	}
+	if !ok {
+		ctx.String(http.StatusOK, "生日信息不合规")
+		return
+	}
+	ok, err = u.NickNameRegexp.MatchString(req.NickName)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "系统错误")
+		return
+	}
+	if !ok {
+		ctx.String(http.StatusOK, "昵称不合规")
+		return
+	}
+	ok, err = u.DescriptionRegexp.MatchString(req.Description)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "系统错误")
+		return
+	}
+	if !ok {
+		ctx.String(http.StatusOK, "个人描述信息不合规")
+		return
+	}
+
+	user, err := u.svc.EditService(ctx, intId, domain.User{
+		Email:       req.Email,
+		NickName:    req.NickName,
+		Birthday:    req.Birthday,
+		Description: req.Description,
+	})
+	if err == service.InvalidUserEmailError {
+		ctx.String(http.StatusOK, "邮箱不存在")
+	}
+	if err != nil {
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"msg":  "修改成功",
+		"user": user,
+	})
 }
-func (*UserHandler) Profile(ctx *gin.Context) {
-
+func (u *UserHandler) Profile(ctx *gin.Context) {
+	id, ok := ctx.Params.Get("id")
+	if !ok {
+		return
+	}
+	type ProfileRequest struct {
+		Email string `json:"email"`
+	}
+	var req ProfileRequest
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	user, err := u.svc.ProfileService(ctx, id)
+	if err == service.InvalidUserEmailError {
+		ctx.String(http.StatusOK, "未查询到相关信息")
+	}
+	if err != nil {
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"email":       user.Email,
+		"nickName":    user.NickName,
+		"birthday":    user.Birthday,
+		"description": user.Description,
+	})
 }
 func (*UserHandler) Delete(ctx *gin.Context) {
 
@@ -126,8 +243,8 @@ func (*UserHandler) Page(ctx *gin.Context) {
 }
 
 func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
-	ug.PUT("/:id", u.Signup)
-	ug.POST("/", u.Signin)
+	ug.PUT("", u.Signup)
+	ug.POST("", u.Signin)
 	ug.POST("/:id", u.Edit)
 	ug.GET("/:id", u.Profile)
 	ug.DELETE("/:id", u.Delete)

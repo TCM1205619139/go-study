@@ -5,6 +5,7 @@ import (
 	"errors"
 	"micro-book/internal/domain"
 	"micro-book/internal/repository"
+	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -14,8 +15,9 @@ type UserService struct {
 }
 
 var (
-	InvavidUserOrPasswordError = errors.New("账号或密码不对")
+	InvalidUserOrPasswordError = errors.New("账号或密码不对")
 	DuplicateUserEmailError    = errors.New("邮箱已被注册")
+	InvalidUserEmailError      = errors.New("邮箱不存在")
 )
 
 func NewUserService(repo *repository.UserRepository) *UserService {
@@ -42,14 +44,41 @@ func (us *UserService) SignupService(ctx context.Context, user domain.User) erro
 func (us *UserService) SigninService(ctx context.Context, user domain.User) (domain.User, error) {
 	u, err := us.repo.FindByEmail(ctx, user.Email)
 	if err == repository.UserNotFoundError {
-		return domain.User{}, InvavidUserOrPasswordError
+		return domain.User{}, InvalidUserOrPasswordError
 	}
 	if err != nil {
 		return domain.User{}, err
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(user.Password))
 	if err != nil {
-		return domain.User{}, InvavidUserOrPasswordError
+		return domain.User{}, InvalidUserOrPasswordError
+	}
+	return u, nil
+}
+
+func (us *UserService) EditService(ctx context.Context, id int64, result domain.User) (domain.User, error) {
+	u, err := us.repo.UpdateById(ctx, id, result)
+	if err == repository.UserNotFoundError {
+		return domain.User{}, InvalidUserEmailError
+	}
+	if err != nil {
+		return domain.User{}, err
+	}
+	return u, nil
+}
+
+func (us *UserService) ProfileService(ctx context.Context, id string) (domain.User, error) {
+	intId, err := strconv.ParseInt(id, 10, 64)
+
+	if err != nil {
+		return domain.User{}, err
+	}
+	u, err := us.repo.FindById(ctx, intId)
+	if err == repository.UserNotFoundError {
+		return domain.User{}, InvalidUserEmailError
+	}
+	if err != nil {
+		return domain.User{}, err
 	}
 	return u, nil
 }

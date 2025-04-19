@@ -24,6 +24,7 @@ func main() {
 
 	server.Use(middlewares.NewLoginMiddlewareBuilder().
 		IgnoreRequest(http.MethodPut, "/user").
+		IgnoreRequest(http.MethodPost, "/user").
 		Build())
 
 	user.RegisterRoutes(server.Group("/user"))
