@@ -238,9 +238,6 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 func (*UserHandler) Delete(ctx *gin.Context) {
 
 }
-func (*UserHandler) Page(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "page.html", nil)
-}
 
 func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.PUT("", u.Signup)
@@ -248,5 +245,4 @@ func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.POST("/:id", u.Edit)
 	ug.GET("/:id", u.Profile)
 	ug.DELETE("/:id", u.Delete)
-	ug.GET("/login", u.Page)
 }
