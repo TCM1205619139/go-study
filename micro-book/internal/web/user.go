@@ -137,6 +137,7 @@ func (u *UserHandler) Signin(ctx *gin.Context) {
 func (u *UserHandler) Edit(ctx *gin.Context) {
 	type EditRequest struct {
 		Email       string `json:"email"`
+		Password    string `json:"password"`
 		NickName    string `json:"nickName"`
 		Birthday    string `json:"birthday"`
 		Description string `json:"description"`
@@ -193,6 +194,7 @@ func (u *UserHandler) Edit(ctx *gin.Context) {
 
 	user, err := u.svc.EditService(ctx, intId, domain.User{
 		Email:       req.Email,
+		Password:    req.Password,
 		NickName:    req.NickName,
 		Birthday:    req.Birthday,
 		Description: req.Description,
@@ -205,8 +207,13 @@ func (u *UserHandler) Edit(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"msg":  "修改成功",
-		"user": user,
+		"msg": "修改成功",
+		"user": gin.H{
+			"Email":       user.Email,
+			"NickName":    user.NickName,
+			"Birthday":    user.Birthday,
+			"Description": user.Description,
+		},
 	})
 }
 func (u *UserHandler) Profile(ctx *gin.Context) {

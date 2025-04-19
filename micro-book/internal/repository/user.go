@@ -94,6 +94,7 @@ func (ur *UserRepository) UpdateById(ctx context.Context, id int64, user domain.
 	}
 
 	u, err = ur.dao.UpdateById(ctx, id, dao.UserEntity{
+		Password:    pkg.MaybeString(user.Password, u.Password),
 		Email:       pkg.MaybeString(user.Email, u.Email),
 		NickName:    pkg.MaybeString(user.NickName, u.NickName),
 		Birthday:    pkg.MaybeString(user.Birthday, u.Birthday),
@@ -104,7 +105,7 @@ func (ur *UserRepository) UpdateById(ctx context.Context, id int64, user domain.
 	}
 
 	return domain.User{
-		Id:          user.Id,
+		Id:          strconv.FormatInt(id, 10),
 		Email:       u.Email,
 		NickName:    u.NickName,
 		Birthday:    u.Birthday,
