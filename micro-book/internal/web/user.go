@@ -168,9 +168,9 @@ func (u *UserHandler) SigninJWT(ctx *gin.Context) {
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := token.SignedString([]byte("12345678123456781234567812345678"))
+	bearer, _ := token.SignedString([]byte("12345678123456781234567812345678"))
 
-	ctx.Header("x-jwt-token", tokenString)
+	ctx.Header("x-jwt-token", bearer)
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"msg": "登录成功",
