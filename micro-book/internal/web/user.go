@@ -8,6 +8,7 @@ import (
 
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
+	jwt "github.com/golang-jwt/jwt/v5"
 
 	"github.com/gin-gonic/gin"
 )
@@ -103,11 +104,11 @@ func (u *UserHandler) Signup(ctx *gin.Context) {
 }
 
 func (u *UserHandler) Signin(ctx *gin.Context) {
-	type SinginRequest struct {
+	type SigninRequest struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
-	var req SinginRequest
+	var req SigninRequest
 
 	if err := ctx.Bind(&req); err != nil {
 		return
@@ -126,8 +127,51 @@ func (u *UserHandler) Signin(ctx *gin.Context) {
 		return
 	}
 	session := sessions.Default(ctx)
-	session.Set("mysession", user.Id)
+	session.Set("userId", user.Id)
 	session.Save()
+	ctx.JSON(http.StatusOK, gin.H{
+		"msg": "登录成功",
+		"id":  user.Id,
+	})
+}
+
+func (u *UserHandler) SigninJWT(ctx *gin.Context) {
+	type SigninRequest struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req SigninRequest
+
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+
+	user, err := u.svc.SigninService(ctx, domain.User{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+	if err == service.InvalidUserOrPasswordError {
+		ctx.String(http.StatusOK, "用户名或密码错误")
+		return
+	}
+	if err != nil {
+		ctx.String(http.StatusOK, "系统异常")
+		return
+	}
+	session := sessions.Default(ctx)
+	session.Set("userId", user.Id)
+	session.Save()
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"Email": user.Email,
+		"Id":    user.Id,
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString([]byte("12345678123456781234567812345678"))
+
+	ctx.Header("x-jwt-token", tokenString)
+
 	ctx.JSON(http.StatusOK, gin.H{
 		"msg": "登录成功",
 		"id":  user.Id,
@@ -248,7 +292,7 @@ func (*UserHandler) Delete(ctx *gin.Context) {
 
 func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.PUT("", u.Signup)
-	ug.POST("", u.Signin)
+	ug.POST("", u.SigninJWT)
 	ug.POST("/:id", u.Edit)
 	ug.GET("/:id", u.Profile)
 	ug.DELETE("/:id", u.Delete)

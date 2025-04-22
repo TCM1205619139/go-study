@@ -7,9 +7,12 @@ import (
 	"micro-book/internal/web"
 	"micro-book/internal/web/middlewares"
 	"net/http"
+	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -18,6 +21,21 @@ import (
 func main() {
 	server := gin.Default()
 	store := cookie.NewStore([]byte("secret"))
+	// store, err := redis.NewStore(10, "tcp", "localhost:6379", "", "")
+	// if err != nil {
+	// 	panic("redis初始化错误")
+	// }
+	server.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost"},
+		AllowMethods:     []string{"PUT", "POST", "GET", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Authorization"},
+		ExposeHeaders:    []string{"X-Jwt-Token"},
+		AllowCredentials: true,
+		AllowOriginFunc: func(origin string) bool {
+			return origin == "https://github.com"
+		},
+		MaxAge: 12 * time.Hour,
+	}))
 	server.Use(sessions.Sessions("mysession", store))
 	db := initDatabase()
 	user := initUser(db)

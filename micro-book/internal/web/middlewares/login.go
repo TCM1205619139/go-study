@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type IgnoreRequest struct {
@@ -25,12 +26,32 @@ func (middleware *LoginMiddlewareBuilder) Build() gin.HandlerFunc {
 			}
 		}
 		session := sessions.Default(ctx)
-		id := session.Get("mysession")
+		id := session.Get("userId")
+		authorization := ctx.GetHeader("Authorization")
+
+		if authorization == "" {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		token, err := jwt.Parse(
+			authorization,
+			func(t *jwt.Token) (interface{}, error) {
+				return []byte("12345678123456781234567812345678"), nil
+			},
+		)
+		if err != nil || !token.Valid {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		fmt.Println("token", token.Claims)
+		fmt.Println("token", token.Raw)
+		fmt.Println("token", token.Valid)
 		if id == nil {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		fmt.Printf("id: %s", id)
 	}
 }
 
