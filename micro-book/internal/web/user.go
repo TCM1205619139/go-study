@@ -5,6 +5,7 @@ import (
 	"micro-book/internal/service"
 	"net/http"
 	"strconv"
+	"time"
 
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
@@ -162,10 +163,18 @@ func (u *UserHandler) SigninJWT(ctx *gin.Context) {
 	session.Set("userId", user.Id)
 	session.Save()
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"Email": user.Email,
-		"Id":    user.Id,
-	})
+	now := time.Now()
+
+	uClaims := JWTUserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			NotBefore: &jwt.NumericDate{Time: now},
+			ExpiresAt: &jwt.NumericDate{Time: now.Add(time.Minute * 5)},
+		},
+		Email: user.Email,
+		Id:    user.Id,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, uClaims)
 
 	// Sign and get the complete encoded token as a string using the secret
 	bearer, _ := token.SignedString([]byte("12345678123456781234567812345678"))
@@ -261,18 +270,20 @@ func (u *UserHandler) Edit(ctx *gin.Context) {
 	})
 }
 func (u *UserHandler) Profile(ctx *gin.Context) {
-	id, ok := ctx.Params.Get("id")
+	c, ok := ctx.Get("claims")
 	if !ok {
+		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
 	type ProfileRequest struct {
 		Email string `json:"email"`
 	}
 	var req ProfileRequest
-	if err := ctx.Bind(&req); err != nil {
+	claims, ok := c.(*JWTUserClaims)
+	if err := ctx.Bind(&req); err != nil || !ok {
 		return
 	}
-	user, err := u.svc.ProfileService(ctx, id)
+	user, err := u.svc.ProfileService(ctx, claims.Id)
 	if err == service.InvalidUserEmailError {
 		ctx.String(http.StatusOK, "未查询到相关信息")
 	}
@@ -296,4 +307,10 @@ func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.POST("/:id", u.Edit)
 	ug.GET("/:id", u.Profile)
 	ug.DELETE("/:id", u.Delete)
+}
+
+type JWTUserClaims struct {
+	jwt.RegisteredClaims
+	Email string
+	Id    string
 }

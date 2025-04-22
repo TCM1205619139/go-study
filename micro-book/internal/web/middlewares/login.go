@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"fmt"
+	"micro-book/internal/web"
 	"net/http"
 
 	"github.com/gin-contrib/sessions"
@@ -34,24 +35,28 @@ func (middleware *LoginMiddlewareBuilder) Build() gin.HandlerFunc {
 			return
 		}
 
-		token, err := jwt.Parse(
+		claims := &web.JWTUserClaims{}
+
+		token, err := jwt.ParseWithClaims(
 			authorization,
+			claims,
 			func(t *jwt.Token) (interface{}, error) {
 				return []byte("12345678123456781234567812345678"), nil
 			},
 		)
-		if err != nil || !token.Valid {
+		if err != nil || !token.Valid || claims.Id == "" {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
-		fmt.Println("token", token.Claims)
 		fmt.Println("token", token.Raw)
 		fmt.Println("token", token.Valid)
 		if id == nil {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
+
+		ctx.Set("claims", claims)
 	}
 }
 
