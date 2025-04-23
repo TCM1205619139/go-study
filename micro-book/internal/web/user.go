@@ -303,7 +303,7 @@ func (*UserHandler) Delete(ctx *gin.Context) {
 
 func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.PUT("", u.Signup)
-	ug.POST("", u.SigninJWT)
+	ug.POST("", u.Signin)
 	ug.POST("/:id", u.Edit)
 	ug.GET("/:id", u.Profile)
 	ug.DELETE("/:id", u.Delete)
