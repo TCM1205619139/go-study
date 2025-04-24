@@ -18,3 +18,10 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
     ports:
       - "6379:6379"
+
+  webook:
+    build: 
+      context: .
+      dockerfile: dockerfile
+    ports:
+      -8080:8080
