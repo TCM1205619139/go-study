@@ -7,7 +7,7 @@ set GOOS=linux
 set GOARCH=arm
 
 REM 编译为 Linux ARM 架构的可执行文件（输出文件名为当前目录的名称）
-go build -o webook .
+go build -o webook-exe .
 
 REM 构建 Docker 镜像
 docker build -t flycash/webook:v0.0.1 .
