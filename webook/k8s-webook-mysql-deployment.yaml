@@ -19,10 +19,18 @@ spec:
         - name: webook-mysql
           image:  mysql:8.0
           imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name:  mysql-storage
+            # 一定要对应mysql数据的存储位置
+              mountPath:  /var/lib/mysql
           env:
             - name: MYSQL_ROOT_PASSWORD
               value: root
           ports:
             - containerPort: 3306
       restartPolicy: Always
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: webook-mysql-claim
   
