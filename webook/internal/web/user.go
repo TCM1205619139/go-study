@@ -300,6 +300,11 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 func (*UserHandler) Delete(ctx *gin.Context) {
 
 }
+func (*UserHandler) Test(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "hello test",
+	})
+}
 
 func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.PUT("", u.Signup)
@@ -307,6 +312,7 @@ func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.POST("/:id", u.Edit)
 	ug.GET("/:id", u.Profile)
 	ug.DELETE("/:id", u.Delete)
+	ug.GET("/test", u.Test)
 }
 
 type JWTUserClaims struct {

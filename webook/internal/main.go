@@ -1,6 +1,7 @@
 package main
 
 import (
+	"micro-book/config"
 	"micro-book/internal/repository"
 	"micro-book/internal/repository/dao"
 	"micro-book/internal/service"
@@ -21,7 +22,7 @@ import (
 func main() {
 	server := gin.Default()
 	store := cookie.NewStore([]byte("secret"))
-	// store, err := redis.NewStore(10, "tcp", "localhost:6379", "", "")
+	// store, err := redis.NewStore(10, "tcp", config.Config.Redis.Addr, "", "")
 	// if err != nil {
 	// 	panic("redis初始化错误")
 	// }
@@ -43,6 +44,7 @@ func main() {
 	server.Use(middlewares.NewLoginMiddlewareBuilder().
 		IgnoreRequest(http.MethodPut, "/user").
 		IgnoreRequest(http.MethodPost, "/user").
+		IgnoreRequest(http.MethodGet, "/user/test").
 		Build())
 
 	user.RegisterRoutes(server.Group("/user"))
@@ -50,7 +52,8 @@ func main() {
 }
 
 func initDatabase() *gorm.DB {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:13306)/webook"), &gorm.Config{})
+	// db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:13306)/webook"), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(config.Config.DB.DSN), &gorm.Config{})
 	if err != nil {
 		panic("数据库初始化错误")
 	}
