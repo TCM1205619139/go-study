@@ -16,5 +16,5 @@ REM 清除环境变量（可选）
 set GOOS=
 set GOARCH=
 
-echo Build completed!
+echo Docker Image Build completed!
 pause
