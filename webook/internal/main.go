@@ -48,7 +48,7 @@ func main() {
 		Build())
 
 	user.RegisterRoutes(server.Group("/user"))
-	server.Run(":8080")
+	server.Run(":8081")
 }
 
 func initDatabase() *gorm.DB {
