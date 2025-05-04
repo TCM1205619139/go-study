@@ -159,9 +159,9 @@ func (u *UserHandler) SigninJWT(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "系统异常")
 		return
 	}
-	session := sessions.Default(ctx)
-	session.Set("userId", user.Id)
-	session.Save()
+	// session := sessions.Default(ctx)
+	// session.Set("userId", user.Id)
+	// session.Save()
 
 	now := time.Now()
 
@@ -308,9 +308,9 @@ func (*UserHandler) Test(ctx *gin.Context) {
 
 func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.PUT("", u.Signup)
-	ug.POST("", u.Signin)
+	ug.POST("", u.SigninJWT)
 	ug.POST("/:id", u.Edit)
-	ug.GET("/:id", u.Profile)
+	ug.GET("", u.Profile)
 	ug.DELETE("/:id", u.Delete)
 	ug.GET("/test", u.Test)
 }

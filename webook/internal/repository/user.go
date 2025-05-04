@@ -3,13 +3,15 @@ package repository
 import (
 	"context"
 	"micro-book/internal/domain"
+	"micro-book/internal/repository/cache"
 	"micro-book/internal/repository/dao"
 	"micro-book/pkg"
 	"strconv"
 )
 
 type UserRepository struct {
-	dao *dao.UserDAO
+	dao   *dao.UserDAO
+	cache *cache.UserCache
 }
 
 var (
@@ -17,9 +19,10 @@ var (
 	DuplicateUserEmailError = dao.DuplicateUserEmailError
 )
 
-func NewUserRepository(dao *dao.UserDAO) *UserRepository {
+func NewUserRepository(dao *dao.UserDAO, cache *cache.UserCache) *UserRepository {
 	return &UserRepository{
-		dao: dao,
+		dao:   dao,
+		cache: cache,
 	}
 }
 
@@ -46,18 +49,36 @@ func (ur *UserRepository) FindByEmail(ctx context.Context, email string) (domain
 }
 
 func (ur *UserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
-	user, err := ur.dao.FindById(ctx, id)
+	user, ok, err := ur.cache.GetUser(ctx, id)
+	if ok {
+		return user, nil
+	}
 	if err != nil {
 		return domain.User{}, err
 	}
-	return domain.User{
-		Id:          strconv.FormatInt(user.Id, 10),
-		Email:       user.Email,
-		Password:    user.Password,
-		NickName:    user.NickName,
-		Birthday:    user.Birthday,
-		Description: user.Description,
-	}, nil
+
+	ue, err := ur.dao.FindById(ctx, id)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	user = domain.User{
+		Id:          strconv.FormatInt(ue.Id, 10),
+		Email:       ue.Email,
+		Password:    ue.Password,
+		NickName:    ue.NickName,
+		Birthday:    ue.Birthday,
+		Description: ue.Description,
+	}
+
+	go func() {
+		if err = ur.cache.SetUser(ctx, user); err != nil {
+			// 不用返回错误，做日志监控就可以了
+			// return domain.User{}, err
+		}
+	}()
+
+	return user, nil
 }
 
 func (ur *UserRepository) UpdateByEmail(ctx context.Context, email string, user domain.User) (domain.User, error) {

@@ -5,7 +5,6 @@ import (
 	"micro-book/internal/web"
 	"net/http"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -26,8 +25,8 @@ func (middleware *LoginMiddlewareBuilder) Build() gin.HandlerFunc {
 				return
 			}
 		}
-		session := sessions.Default(ctx)
-		id := session.Get("userId")
+		// session := sessions.Default(ctx)
+		// id := session.Get("userId")
 		authorization := ctx.GetHeader("Authorization")
 
 		if authorization == "" {
@@ -51,10 +50,10 @@ func (middleware *LoginMiddlewareBuilder) Build() gin.HandlerFunc {
 
 		fmt.Println("token", token.Raw)
 		fmt.Println("token", token.Valid)
-		if id == nil {
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
+		// if id == nil {
+		// 	ctx.AbortWithStatus(http.StatusUnauthorized)
+		// 	return
+		// }
 
 		ctx.Set("claims", claims)
 	}

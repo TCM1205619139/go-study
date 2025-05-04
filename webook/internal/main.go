@@ -3,6 +3,7 @@ package main
 import (
 	"micro-book/config"
 	"micro-book/internal/repository"
+	"micro-book/internal/repository/cache"
 	"micro-book/internal/repository/dao"
 	"micro-book/internal/service"
 	"micro-book/internal/web"
@@ -10,8 +11,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -21,7 +21,12 @@ import (
 
 func main() {
 	server := gin.Default()
-	store := cookie.NewStore([]byte("secret"))
+	store := redis.NewClient(&redis.Options{
+		Addr:     config.Config.Redis.Addr,
+		Password: "",
+		DB:       0,
+	})
+	// store := cookie.NewStore([]byte("secret"))
 	// store, err := redis.NewStore(10, "tcp", config.Config.Redis.Addr, "", "")
 	// if err != nil {
 	// 	panic("redis初始化错误")
@@ -37,9 +42,9 @@ func main() {
 		},
 		MaxAge: 12 * time.Hour,
 	}))
-	server.Use(sessions.Sessions("mysession", store))
+	// server.Use(sessions.Sessions("mysession", store))
 	db := initDatabase()
-	user := initUser(db)
+	user := initUser(db, store)
 
 	server.Use(middlewares.NewLoginMiddlewareBuilder().
 		IgnoreRequest(http.MethodPut, "/user").
@@ -48,7 +53,7 @@ func main() {
 		Build())
 
 	user.RegisterRoutes(server.Group("/user"))
-	server.Run(":8081")
+	server.Run(":8080")
 }
 
 func initDatabase() *gorm.DB {
@@ -64,9 +69,10 @@ func initDatabase() *gorm.DB {
 	return db
 }
 
-func initUser(db *gorm.DB) *web.UserHandler {
+func initUser(db *gorm.DB, redis redis.Cmdable) *web.UserHandler {
 	ud := dao.NewUserDAO(db)
-	ur := repository.NewUserRepository(ud)
+	uCache := cache.NewUserCache(redis)
+	ur := repository.NewUserRepository(ud, uCache)
 	usvc := service.NewUserService(ur)
 	user := web.NewUserHandler(usvc)
 
