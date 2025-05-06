@@ -8,21 +8,21 @@ import (
 	sms "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
 )
 
-type Service struct {
+type SmsService struct {
 	appId     *string
 	signature *string
 	client    *sms.Client
 }
 
-func NewService(appId string, signature string, client *sms.Client) *Service {
-	return &Service{
+func NewSmsService(appId string, signature string, client *sms.Client) *SmsService {
+	return &SmsService{
 		appId:     &appId,
 		signature: &signature,
 		client:    client,
 	}
 }
 
-func (service *Service) Send(ctx context.Context, tpl string, args []string, numbers ...string) error {
+func (service *SmsService) Send(ctx context.Context, tpl string, args []string, numbers ...string) error {
 	req := sms.NewSendSmsRequest()
 	req.SmsSdkAppId = service.appId
 	req.SignName = service.signature
